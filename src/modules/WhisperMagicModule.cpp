@@ -4,6 +4,12 @@
 
 WhisperMagicModule *whisperMagicModule;
 
+WhisperMagicModule::WhisperMagicModule() : SinglePortModule("whispermagic", meshtastic_PortNum_TEXT_MESSAGE_APP)
+{
+    preflightSleepObserver.observe(&preflightSleep);
+    deepSleepObserver.observe(&notifyDeepSleep);
+}
+
 ProcessMessage WhisperMagicModule::handleReceived(const meshtastic_MeshPacket &mp)
 {
     auto &p = mp.decoded;
@@ -18,4 +24,20 @@ ProcessMessage WhisperMagicModule::handleReceived(const meshtastic_MeshPacket &m
 bool WhisperMagicModule::wantPacket(const meshtastic_MeshPacket *p)
 {
     return MeshService::isTextPayload(p);
+}
+
+int WhisperMagicModule::preflightSleepHandler(void *unused)
+{
+    if (pendingOutbound) {
+        LOG_DEBUG("WhisperMagic: vetoing sleep — outbound message pending");
+        return 1; // veto
+    }
+    return 0; // allow
+}
+
+int WhisperMagicModule::deepSleepHandler(void *unused)
+{
+    LOG_DEBUG("WhisperMagic: entering deep sleep, clearing state");
+    pendingOutbound = false;
+    return 0;
 }
